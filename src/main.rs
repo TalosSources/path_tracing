@@ -17,13 +17,14 @@ struct Sphere<'a> {
 
 struct Material {
     albedo : Vec3,
+    emissive : Vec3,
     roughness : f64
 }
 
 impl Material {
 
-    const DEFAULT_MAT: Material = Material {albedo : Vec3::ZERO, roughness : 0.4};
-    const GROUND_MAT: Material = Material {albedo : Vec3{x: 0.75, y: 0.75, z: 0.25}, roughness : 0.5};
+    const DEFAULT_MAT: Material = Material {albedo : Vec3::ZERO, emissive : Vec3::ZERO, roughness : 0.4};
+    const GROUND_MAT: Material = Material {albedo : Vec3{x: 0.75, y: 0.35, z: 0.7}, emissive: Vec3::ZERO, roughness : 0.2};
 
     fn default() -> &'static Material {
         &Material::DEFAULT_MAT
@@ -163,10 +164,10 @@ fn pixel_shader(ctx : &Context, i : u32, j : u32) -> Rgb<u8> {
     
                 ray.origin = int.pos.add(&int.normal.scale(0.001));
                 ray.dir = reflect(ray.dir, int.normal, int.mat.roughness);
-                ray.color = ray.color.mult(&int.mat.albedo);
+                ray.color = ray.color.mult(&int.mat.albedo.add(&int.mat.emissive));
             
             } else {
-                let sky_color = Vec3 {x:0.8, y:0.95, z:1.0};
+                let sky_color = Vec3 {x:0.4, y:0.5, z:0.55};
                 let light_color = Vec3{x: 1.0, y: 0.8, z:0.8};
                 ray.color = ray.color
                     .mult(&sky_color); // sky color
@@ -193,10 +194,10 @@ fn main() {
     
     let (width, height) : (u32, u32) = (1000, 1000);
 
-    let mat_1 = Material {albedo : Vec3{x:1.0, y:0.5, z:0.5}, roughness: 0.04};
-    let mat_2 = Material {albedo : Vec3{x:0.5, y:1.0, z:0.5}, roughness: 0.3};
-    let mat_3 = Material {albedo : Vec3{x:0.5, y:0.5, z:1.0}, roughness: 0.8};
-    let mat_4 = Material {albedo : Vec3{x: 0.8, y: 0.8, z: 0.8}, roughness: 0.15};
+    let mat_1 = Material {albedo : Vec3{x:1.0, y:0.5, z:0.5}, emissive : Vec3::ZERO, roughness: 0.04};
+    let mat_2 = Material {albedo : Vec3{x:0.5, y:1.0, z:0.5}, emissive : Vec3{x:1.0, y:1.0, z:1.0}, roughness: 0.3};
+    let mat_3 = Material {albedo : Vec3{x:0.5, y:0.5, z:1.0}, emissive : Vec3::ZERO, roughness: 0.8};
+    let mat_4 = Material {albedo : Vec3{x: 0.8, y: 0.8, z: 0.8}, emissive : Vec3::ZERO, roughness: 0.15};
 
     let spheres = vec![
         Sphere {centre : Vec3{x:0.4, y:-0.4, z:-2.0  -1.0}, radius : 0.5, mat: &mat_1},
