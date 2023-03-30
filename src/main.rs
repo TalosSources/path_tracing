@@ -1,12 +1,21 @@
+use std::thread;
+
 use image::ImageBuffer;
 use image::Rgb;
 
 mod vector;
 use vector::Vec3;
 
+use rand::{thread_rng, Rng};
+
 struct Scene<'a> {
     spheres : Vec<Sphere<'a>>,
-    light_dir : Vec3
+    lights : Vec<Light>
+}
+
+struct Light {
+    dir : Vec3,
+    color : Vec3
 }
 
 struct Sphere<'a> {
@@ -23,8 +32,8 @@ struct Material {
 
 impl Material {
 
-    const DEFAULT_MAT: Material = Material {albedo : Vec3::ZERO, emissive : Vec3::ZERO, roughness : 0.4};
-    const GROUND_MAT: Material = Material {albedo : Vec3{x: 0.75, y: 0.35, z: 0.7}, emissive: Vec3::ZERO, roughness : 0.2};
+    const DEFAULT_MAT: Material = Material {albedo : Vec3::ZERO, emissive : Vec3::ZERO, roughness : 0.2};
+    const GROUND_MAT: Material = Material {albedo : Vec3{x: 0.75, y: 0.35, z: 0.7}, emissive: Vec3::ZERO, roughness : 1.0};
 
     fn default() -> &'static Material {
         &Material::DEFAULT_MAT
@@ -144,7 +153,7 @@ fn pixel_shader(ctx : &Context, i : u32, j : u32) -> Rgb<u8> {
     //let ray = Ray{origin : Vec3{x : x, y : y, z : 0.0}, dir : Vec3{x : 0.0, y : 0.0, z : -1.0}}; //ORTHOGRAPHIC PROJETION
 
     let mut acc_color = Vec3::ZERO;
-    let iters = 1000;
+    let iters = 20;
     for _ in 0..iters {
 
         let mut ray = Ray{ 
@@ -164,16 +173,28 @@ fn pixel_shader(ctx : &Context, i : u32, j : u32) -> Rgb<u8> {
     
                 ray.origin = int.pos.add(&int.normal.scale(0.001));
                 ray.dir = reflect(ray.dir, int.normal, int.mat.roughness);
-                ray.color = ray.color.mult(&int.mat.albedo.add(&int.mat.emissive));
+                let p = int.mat.emissive.norm() / int.mat.albedo.norm(); //proba of having been emitted
+                if p > thread_rng().gen() {
+                    ray.color = ray.color.mult(&int.mat.emissive);
+                    break;
+                } else {
+                    ray.color = ray.color.mult(&int.mat.albedo);
+                }
             
             } else {
-                let sky_color = Vec3 {x:0.4, y:0.5, z:0.55};
-                let light_color = Vec3{x: 1.0, y: 0.8, z:0.8};
+                let sky_color = Vec3 {x:0.8, y:0.8, z:1.0};
+                let mut light_component = Vec3::ZERO;
+                for light in &ctx.scene.lights {
+                    light_component = light_component.add(
+                        &light.color.scale(ray.dir.dot(&light.dir))
+                    )
+                }
+                
                 ray.color = ray.color
-                    .mult(&sky_color); // sky color
+                    .mult(&light_component); // sky color
                 break;
             }
-    
+
             iter += 1;
             if iter > 5 {
                 break;
@@ -194,25 +215,47 @@ fn main() {
     
     let (width, height) : (u32, u32) = (1000, 1000);
 
-    let mat_1 = Material {albedo : Vec3{x:1.0, y:0.5, z:0.5}, emissive : Vec3::ZERO, roughness: 0.04};
-    let mat_2 = Material {albedo : Vec3{x:0.5, y:1.0, z:0.5}, emissive : Vec3{x:1.0, y:1.0, z:1.0}, roughness: 0.3};
+    let mat_1 = Material {albedo : Vec3{x:1.0, y:0.5, z:0.5}, emissive : Vec3::ZERO, roughness: 0.001};
+    let mat_2 = Material {albedo : Vec3{x:0.5, y:1.0, z:0.5}, emissive : Vec3{x:0.5, y:0.5, z:0.5}, roughness: 0.3};
     let mat_3 = Material {albedo : Vec3{x:0.5, y:0.5, z:1.0}, emissive : Vec3::ZERO, roughness: 0.8};
     let mat_4 = Material {albedo : Vec3{x: 0.8, y: 0.8, z: 0.8}, emissive : Vec3::ZERO, roughness: 0.15};
 
     let spheres = vec![
         Sphere {centre : Vec3{x:0.4, y:-0.4, z:-2.0  -1.0}, radius : 0.5, mat: &mat_1},
-        Sphere {centre : Vec3{x:0.0, y:0.1, z:-1.5  -1.0}, radius : 0.18, mat: &mat_2},
+        Sphere {centre : Vec3{x:0.0, y:0.2, z:-1.5  -1.0}, radius : 0.26, mat: &mat_2},
         Sphere {centre : Vec3{x:-0.5, y:0.3, z:-2.4  -1.0}, radius : 0.4, mat: &mat_3},
         Sphere {centre : Vec3{x: -0.3, y: -0.6, z:-1.3  -1.0}, radius : 0.4, mat: &mat_4}
     ];
 
-    let light_dir = Vec3{x: 1.0, y: 1.0, z: 1.0}.normalized();
+    let light_1 = Light{
+        dir : Vec3{x: 5.0, y: 1.0, z: 1.0}.normalized(),
+        color : Vec3 {x:1.5, y:1.3, z: 1.0} 
+    };
 
-    let scene = Scene { spheres : spheres, light_dir : light_dir};
+    let light_2 = Light{
+        dir : Vec3{x: -5.0, y: 1.0, z: 1.0}.normalized(),
+        color : Vec3 {x:1.0, y:1.3, z: 1.5} 
+    };
+
+    let light_3 = Light{
+        dir : Vec3{x: -0.4, y: 2.0, z: -2.0}.normalized(),
+        color : Vec3 {x:1.3, y:1.3, z: 1.3} 
+    };
+
+    let scene = Scene { spheres : spheres, lights : vec![light_1, light_2, light_3]};
 
     let ctx = Context {scene : scene, width : width, height : height, focal_length : 2.0};
 
     let mut img : image::RgbImage = ImageBuffer::new(width, height);
+
+    /*let mut threads  = vec![];
+    for i in 0..8 {
+        let new_thread = thread::spawn( move || {
+            println!("hey");
+            }
+        );
+        threads.push(new_thread);
+    }*/
 
     for i in 0..width {
         for j in 0..height {
