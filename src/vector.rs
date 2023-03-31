@@ -59,3 +59,7 @@ impl Vec3 {
     }
  
 }
+
+pub struct Mat4 {
+    mat : f64
+}

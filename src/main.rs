@@ -1,4 +1,3 @@
-use std::thread;
 
 use image::ImageBuffer;
 use image::Rgb;
@@ -33,7 +32,9 @@ struct Material {
 impl Material {
 
     const DEFAULT_MAT: Material = Material {albedo : Vec3::ZERO, emissive : Vec3::ZERO, roughness : 0.2};
-    const GROUND_MAT: Material = Material {albedo : Vec3{x: 0.75, y: 0.35, z: 0.7}, emissive: Vec3::ZERO, roughness : 1.0};
+    const GROUND_MAT: Material = Material {albedo : Vec3{x: 0.73, y: 0.7, z: 0.7}, emissive: Vec3::ZERO, roughness : 0.5};
+    const WALL_MAT_1: Material = Material {albedo : Vec3{x: 0.9, y: 0.65, z: 0.9}, emissive: Vec3::ZERO, roughness : 0.5};
+    const WALL_MAT_2: Material = Material {albedo : Vec3{x: 0.9, y: 0.9, z: 0.65}, emissive: Vec3::ZERO, roughness : 0.5};
 
     fn default() -> &'static Material {
         &Material::DEFAULT_MAT
@@ -94,6 +95,20 @@ fn intersect<'a>(ray : &Ray, scene : &'a Scene) -> Intersection<'a> {
 
     let s_inter = intersect_ground_plane(ray);
     if s_inter.hit && (s_inter.dist < dist || !hit) {
+        hit = true;
+        dist = s_inter.dist;
+        inter = s_inter;
+    }
+
+    let s_inter = intersect_z_plane(ray);
+    if s_inter.hit && (s_inter.dist < dist || !hit) {
+        hit = true;
+        dist = s_inter.dist;
+        inter = s_inter;
+    }
+
+    let s_inter = intersect_x_plane(ray);
+    if s_inter.hit && (s_inter.dist < dist || !hit) {
         inter = s_inter;
     }
 
@@ -135,6 +150,18 @@ fn intersect_ground_plane(ray : &Ray) -> Intersection<'static> {
     Intersection { hit: mu > 0.0, dist: mu, pos: ray.origin.add(&ray.dir.scale(mu)), normal: Vec3{x:0.0, y:1.0,z:0.0}, mat: &Material::GROUND_MAT }
 }
 
+fn intersect_z_plane(ray : &Ray) -> Intersection<'static> {
+    let mu = (-5.0 -ray.origin.z) / ray.dir.z;
+
+    Intersection { hit: mu > 0.0, dist: mu, pos: ray.origin.add(&ray.dir.scale(mu)), normal: Vec3{x:0.0, y:0.0,z:1.0}, mat: &Material::WALL_MAT_1 }
+}
+
+fn intersect_x_plane(ray : &Ray) -> Intersection<'static> {
+    let mu = (-2.0 -ray.origin.x) / ray.dir.x;
+
+    Intersection { hit: mu > 0.0, dist: mu, pos: ray.origin.add(&ray.dir.scale(mu)), normal: Vec3{x:1.0, y:0.0,z:0.0}, mat: &Material::WALL_MAT_2 }
+}
+
 fn reflect(dir : Vec3, normal : Vec3, roughness: f64) -> Vec3 {
     dir
         .minus(&normal.scale(2.0 * normal.dot(&dir)))
@@ -144,7 +171,7 @@ fn reflect(dir : Vec3, normal : Vec3, roughness: f64) -> Vec3 {
                         .normalized()
 }
 
-fn pixel_shader(ctx : &Context, i : u32, j : u32) -> Rgb<u8> {
+fn pixel_shader(ctx : &Context, i : u32, j : u32, bounces : u8, samples_per_pixel: u32) -> Rgb<u8> {
 
     //for now, we use orthographic projection in the -1 to 1 window, looking at z
     let x = 2.0 * (i as f64) / (ctx.width as f64) - 1.0;
@@ -153,8 +180,7 @@ fn pixel_shader(ctx : &Context, i : u32, j : u32) -> Rgb<u8> {
     //let ray = Ray{origin : Vec3{x : x, y : y, z : 0.0}, dir : Vec3{x : 0.0, y : 0.0, z : -1.0}}; //ORTHOGRAPHIC PROJETION
 
     let mut acc_color = Vec3::ZERO;
-    let iters = 20;
-    for _ in 0..iters {
+    for _ in 0..samples_per_pixel {
 
         let mut ray = Ray{ 
             origin : Vec3::ZERO, 
@@ -182,12 +208,15 @@ fn pixel_shader(ctx : &Context, i : u32, j : u32) -> Rgb<u8> {
                 }
             
             } else {
-                let sky_color = Vec3 {x:0.8, y:0.8, z:1.0};
+                //let sky_color = Vec3 {x:0.8, y:0.8, z:1.0};
                 let mut light_component = Vec3::ZERO;
                 for light in &ctx.scene.lights {
-                    light_component = light_component.add(
-                        &light.color.scale(ray.dir.dot(&light.dir))
-                    )
+                    let scalar = ray.dir.dot(&light.dir);
+                    if scalar > 0.9 { //simulates a circular emmissive surface in the sky for the sun
+                        light_component = light_component.add(
+                            &light.color.scale(ray.dir.dot(&light.dir))
+                        );
+                    }
                 }
                 
                 ray.color = ray.color
@@ -196,7 +225,7 @@ fn pixel_shader(ctx : &Context, i : u32, j : u32) -> Rgb<u8> {
             }
 
             iter += 1;
-            if iter > 5 {
+            if iter > bounces {
                 break;
             }
         }
@@ -204,7 +233,7 @@ fn pixel_shader(ctx : &Context, i : u32, j : u32) -> Rgb<u8> {
         acc_color = acc_color.add(&ray.color);
     }
     
-    acc_color = acc_color.scale(1.0 / (iters as f64));
+    acc_color = acc_color.scale(1.0 / (samples_per_pixel as f64));
 
     let f_to_u8 = |f: f64| (255.0 * f.max(0.0).min(1.0)) as u8;
     return Rgb([f_to_u8(acc_color.x), f_to_u8(acc_color.y), f_to_u8(acc_color.z)]);
@@ -216,54 +245,45 @@ fn main() {
     let (width, height) : (u32, u32) = (1000, 1000);
 
     let mat_1 = Material {albedo : Vec3{x:1.0, y:0.5, z:0.5}, emissive : Vec3::ZERO, roughness: 0.001};
-    let mat_2 = Material {albedo : Vec3{x:0.5, y:1.0, z:0.5}, emissive : Vec3{x:0.5, y:0.5, z:0.5}, roughness: 0.3};
+    let mat_2 = Material {albedo : Vec3{x:0.5, y:1.0, z:0.5}, emissive : Vec3{x:2.0, y:2.0, z:2.0}, roughness: 0.3};
     let mat_3 = Material {albedo : Vec3{x:0.5, y:0.5, z:1.0}, emissive : Vec3::ZERO, roughness: 0.8};
     let mat_4 = Material {albedo : Vec3{x: 0.8, y: 0.8, z: 0.8}, emissive : Vec3::ZERO, roughness: 0.15};
 
     let spheres = vec![
-        Sphere {centre : Vec3{x:0.4, y:-0.4, z:-2.0  -1.0}, radius : 0.5, mat: &mat_1},
-        Sphere {centre : Vec3{x:0.0, y:0.2, z:-1.5  -1.0}, radius : 0.26, mat: &mat_2},
-        Sphere {centre : Vec3{x:-0.5, y:0.3, z:-2.4  -1.0}, radius : 0.4, mat: &mat_3},
-        Sphere {centre : Vec3{x: -0.3, y: -0.6, z:-1.3  -1.0}, radius : 0.4, mat: &mat_4}
+        Sphere {centre : Vec3{x:0.2, y:-0.4, z:-2.0  -1.0}, radius : 0.5, mat: &mat_1},
+        Sphere {centre : Vec3{x:0.6, y:-0.74, z:-1.5  -1.0}, radius : 0.26, mat: &mat_2},
+        Sphere {centre : Vec3{x:-0.6, y:0.3, z:-2.4  -1.0}, radius : 0.4, mat: &mat_3},
+        Sphere {centre : Vec3{x: -0.4, y: -0.6, z:-1.3  -1.0}, radius : 0.4, mat: &mat_4}
     ];
 
     let light_1 = Light{
         dir : Vec3{x: 5.0, y: 1.0, z: 1.0}.normalized(),
-        color : Vec3 {x:1.5, y:1.3, z: 1.0} 
+        color : Vec3 {x:1.4, y:1.3, z: 1.2}.scale(6.0) 
     };
 
     let light_2 = Light{
         dir : Vec3{x: -5.0, y: 1.0, z: 1.0}.normalized(),
-        color : Vec3 {x:1.0, y:1.3, z: 1.5} 
+        color : Vec3 {x:1.2, y:1.3, z: 1.4}.scale(6.0)
     };
 
     let light_3 = Light{
         dir : Vec3{x: -0.4, y: 2.0, z: -2.0}.normalized(),
-        color : Vec3 {x:1.3, y:1.3, z: 1.3} 
+        color : Vec3 {x:1.3, y:1.3, z: 1.3}.scale(6.0)
     };
 
     let scene = Scene { spheres : spheres, lights : vec![light_1, light_2, light_3]};
 
     let ctx = Context {scene : scene, width : width, height : height, focal_length : 2.0};
 
-    let mut img : image::RgbImage = ImageBuffer::new(width, height);
 
-    /*let mut threads  = vec![];
-    for i in 0..8 {
-        let new_thread = thread::spawn( move || {
-            println!("hey");
-            }
-        );
-        threads.push(new_thread);
-    }*/
+    let mut img : image::RgbImage = ImageBuffer::new(width, height);
 
     for i in 0..width {
         for j in 0..height {
-            let pixel = pixel_shader(&ctx, i, j);
+            let pixel = pixel_shader(&ctx, i, j, 5, 500);
             img.put_pixel(i, j, pixel);
         }
     }
-
     img.save("render.png").expect("Couldn't save image");
 
 }
