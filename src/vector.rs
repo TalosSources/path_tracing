@@ -1,5 +1,5 @@
-use rand::{thread_rng, Rng};
 
+use rand::{thread_rng, Rng};
 
 pub struct Vec3 {
     pub x : f64,
