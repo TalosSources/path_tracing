@@ -20,8 +20,8 @@ fn main() {
 
     let ctx = Context {
         scene: Scene::cornell_box(),
-        width: width,
-        height: height,
+        width,
+        height,
         focal_length: 0.7,
     };
     let img: image::RgbImage = ImageBuffer::new(width, height);

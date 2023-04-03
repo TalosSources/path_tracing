@@ -221,7 +221,7 @@ impl Scene {
             objects.push(Box::new(s));
         }
 
-        Scene { objects: objects }
+        Scene { objects }
     }
 
     pub fn _scene_2() -> Scene {

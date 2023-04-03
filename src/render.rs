@@ -81,9 +81,9 @@ impl Object for Sphere {
                 let pos = ray.origin.add(&ray.dir.scale(dist));
                 let normal = pos.minus(&self.centre).normalized();
                 return Intersection {
-                    hit: hit,
-                    dist: dist,
-                    pos: pos,
+                    hit,
+                    dist,
+                    pos,
                     normal: normal.scale(if inside { -1.0 } else { 1.0 }),
                     mat: &self.mat,
                 };
@@ -145,8 +145,8 @@ pub fn pixel_shader(ctx: &Context, i: u32, j: u32, bounces: u8, samples_per_pixe
         let mut ray = Ray {
             origin: Vec3::ZERO,
             dir: Vec3 {
-                x: x,
-                y: y,
+                x,
+                y,
                 z: -ctx.focal_length,
             }
             .normalized(),
