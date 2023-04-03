@@ -57,7 +57,6 @@ impl Vec3 {
         }
 
         vec.normalized()
-        //Self::random_vector_in_unit_cube().normalized()
     }
 
     pub fn random_vector_in_hemisphere(normal : &Vec3) -> Vec3 {

@@ -1,5 +1,5 @@
 
-use crate::scene::{Scene, Light, Sphere, Plane};
+use crate::scene::{Scene, Sphere, Plane};
 use crate::Material;
 use crate::Vec3;
 
@@ -14,7 +14,7 @@ pub struct Context {
     pub focal_length : f64
 }
 
-struct Ray {
+pub struct Ray {
     origin : Vec3,
     dir : Vec3,
     color : Vec3,
@@ -22,7 +22,7 @@ struct Ray {
     n : f64
 }
 
-struct Intersection<'a> {
+pub struct Intersection<'a> {
     hit : bool,
     dist : f64,
     pos : Vec3,
@@ -54,7 +54,7 @@ fn intersect<'a>(ray : &Ray, scene : &'a Scene) -> Intersection<'a> {
     let mut hit = false;
     let mut dist = 0.0;
 
-    for object in scene.objects {
+    for object in &scene.objects {
         let s_inter = object.intersect(&ray);
         if s_inter.hit && (s_inter.dist < dist || !hit) {
             hit = true;
@@ -128,7 +128,6 @@ fn refract(dir : &Vec3, normal : &Vec3, n1 : f64, n2 : f64) -> Vec3 {
     let sqr_root = (nd.powf(2.0) + (n2/n1).powf(2.0) - 1.0).sqrt();
 
     normal.scale(sqr_root - nd).add(dir).scale(n1/n2).normalized()
-    //Vec3{x:dir.x, y:dir.y, z:dir.z}
 }
 
 pub fn pixel_shader(ctx : &Context, i : u32, j : u32, bounces : u8, samples_per_pixel: u32) -> Rgb<u8> {
@@ -182,7 +181,6 @@ pub fn pixel_shader(ctx : &Context, i : u32, j : u32, bounces : u8, samples_per_
                         ray.n = next_n;
                         let scaler = int.mat.transparency;
                         let new_color = ray.color.mult(&int.mat.albedo).scale(scaler);
-                        //println!("old_color = {}, new color = {}", ray.color, new_color);
                         ray.color = new_color;
                         ray.origin = int.pos.add(&int.normal.scale(-0.001));
                     } else {
@@ -193,18 +191,6 @@ pub fn pixel_shader(ctx : &Context, i : u32, j : u32, bounces : u8, samples_per_
                 }
 
             } else {
-                //let sky_color = Vec3 {x:0.8, y:0.8, z:1.0};
-                //let mut light_component = Vec3::ZERO;
-                //for light in &ctx.scene.lights {
-                //    let scalar = ray.dir.dot(&light.dir);
-                //    if scalar > 0.9 { //simulates a circular emmissive surface in the sky for the sun
-                //        light_component = light_component.add(
-                //            &light.color.scale(ray.dir.dot(&light.dir))
-                //        );
-                //    }
-                //}
-                
-                //ray.emitted = ray.emitted.add(&light_component.mult(&ray.color));
                 break;
             }
 
@@ -220,6 +206,7 @@ pub fn pixel_shader(ctx : &Context, i : u32, j : u32, bounces : u8, samples_per_
     acc_color = acc_color.scale(1.0 / (samples_per_pixel as f64));
 
     let f_to_u8 = |f: f64| (255.0 * f.max(0.0).min(1.0)) as u8;
-    return Rgb([f_to_u8(acc_color.x), f_to_u8(acc_color.y), f_to_u8(acc_color.z)]);
+    
+    Rgb([f_to_u8(acc_color.x), f_to_u8(acc_color.y), f_to_u8(acc_color.z)])
 
 }

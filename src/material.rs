@@ -48,6 +48,7 @@ impl Material {
         albedo : Vec3{x: 1.0, y: 1.0, z: 1.0},
         specular : Vec3::ONE,
         specularity : 0.1,
+        fresnel_0 : 0.8,
         ..Material::DIFFUSE
     };
 

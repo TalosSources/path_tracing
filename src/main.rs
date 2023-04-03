@@ -43,7 +43,7 @@ fn main() {
             move || {
                 for i in low..up {
                     for j in 0..height {
-                        let pixel = pixel_shader(&ctx_clone, i, j, 7, 100);
+                        let pixel = pixel_shader(&ctx_clone, i, j, 7, 5000);
                         img_clone.lock().unwrap().put_pixel(i, j, pixel);
                     }
                     let mut ref_ = counter_clone.lock().unwrap();

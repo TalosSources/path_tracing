@@ -2,11 +2,6 @@ use crate::Vec3;
 use crate::Material;
 use crate::render::Object;
 
-pub struct Light {
-    pub dir : Vec3,
-    pub color : Vec3
-}
-
 pub struct Sphere {
     pub centre : Vec3,
     pub radius : f64,
@@ -20,13 +15,11 @@ pub struct Plane {
 }
 
 pub struct Scene {
-    pub spheres : Vec<Sphere>,
-    pub lights : Vec<Light>,
-    pub planes : Vec<Plane>
+    pub objects : Vec<Box<dyn Object + Send + Sync>>
 }
 
 impl Scene {
-    pub fn scene_1() -> Scene {
+    pub fn _scene_1() -> Scene {
         const MAT_1 : Material = Material {albedo : Vec3{x:1.0, y:0.5, z:0.5}, emissive : Vec3::ZERO, roughness: 0.001, specular:Vec3::ONE,specularity:0.3, fresnel_0:0.0, transparency:1.0, n:1.2};
         const MAT_2: Material = Material {albedo : Vec3{x:0.5, y:1.0, z:0.5}, emissive : Vec3{x:5.0, y:5.0, z:5.0}, roughness: 0.3, specular:Vec3::ZERO,specularity:0.0, fresnel_0:0.0, transparency:1.0, n:1.2};
         const MAT_3: Material = Material {albedo : Vec3{x:0.5, y:0.5, z:1.0}, emissive : Vec3::ZERO, roughness: 1.0, specular:Vec3::ONE,specularity:0.5, fresnel_0:0.0, transparency:1.0, n:1.2};
@@ -48,26 +41,19 @@ impl Scene {
             Plane {normal : Vec3{x:1.0, y:0.0,z:0.0}, pos : Vec3{x: -2.0, y: 0.0, z: 0.0}, mat: &WALL_MAT_2},
             Plane {normal : Vec3{x:0.0, y:0.0,z:1.0}, pos : Vec3{x: 0.0, y: 0.0, z: -5.0}, mat: &WALL_MAT_1},
         ];
+
+        let mut objects : Vec<Box<dyn Object + Send + Sync>> = vec![];
+        for p in planes {
+            objects.push(Box::new(p));
+        }
+        for s in spheres {
+            objects.push(Box::new(s));
+        }
     
-        let light_1 = Light{
-            dir : Vec3{x: 5.0, y: 1.0, z: 1.0}.normalized(),
-            color : Vec3 {x:1.4, y:1.3, z: 1.2}.scale(21.0) 
-        };
-    
-        let light_2 = Light{
-            dir : Vec3{x: -5.0, y: 1.0, z: 1.0}.normalized(),
-            color : Vec3 {x:1.2, y:1.3, z: 1.4}.scale(21.0)
-        };
-    
-        let light_3 = Light{
-            dir : Vec3{x: -0.4, y: 2.0, z: -2.0}.normalized(),
-            color : Vec3 {x:1.3, y:1.3, z: 1.3}.scale(21.0)
-        };
-    
-        Scene { spheres : spheres, lights : vec![light_1, light_2, light_3], planes: planes}
+        Scene {objects : objects}
     } 
 
-    pub fn scene_2() -> Scene {
+    pub fn _scene_2() -> Scene {
 
         const SPHERE_MAT_1 : Material = Material {
             albedo : Vec3{x:1.0, y:1.0, z:1.0},
@@ -128,8 +114,6 @@ impl Scene {
             ..EMISSIVE_MAT
         };
 
-        let light1 = Light {dir : Vec3{x:3.0, y:1.0, z:1.0}, color : Vec3::ONE.scale(1.5)};
-        let light2 = Light {dir : Vec3{x:-3.0, y:1.0, z:1.0}, color : Vec3::ONE.scale(1.3)};
 
         let sphere1 = Sphere {centre : Vec3{x: 0.3, y: 0.0, z: -3.0}, radius : 0.3, mat : &SPHERE_MAT_1};
         let sphere2 = Sphere {centre : Vec3{x: 0.0, y: 0.0, z: -2.0}, radius : 0.3, mat : &SPHERE_MAT_1};
@@ -144,7 +128,12 @@ impl Scene {
         let plane5 = Plane {normal : Vec3{x:-1.0, y:0.0, z:0.0}, pos : Vec3{x:2.0, y:0.0, z:0.0}, mat : &PLANE_MAT_3};
         let emissive_plane = Plane {normal : Vec3{x:0.0, y:-1.0, z:0.0}, pos: Vec3{x:0.0, y:10.0, z:0.0}, mat : &EMISSIVE_MAT};
 
-        Scene{spheres : vec![sphere1, sphere2, sphere3, sphere4, emissive_sphere], lights : vec![light1/*, light2*/], planes: vec![plane1, plane2, plane3, /*plane4, plane5,*/ emissive_plane]}
+        Scene {
+            objects : vec![
+                Box::new(sphere1), Box::new(sphere2), Box::new(sphere3), Box::new(sphere4), Box::new(emissive_sphere),
+                Box::new(plane1), Box::new(plane2), Box::new(plane3), Box::new(emissive_plane)
+            ]
+        }
     }
 
     pub fn cornell_box() -> Scene {
@@ -174,11 +163,15 @@ impl Scene {
         let sphere1 = Sphere {centre : Vec3{x: -0.4, y: -0.3, z: -0.7}, radius : 0.25, mat : &Material::DIFFUSE};
         let sphere2 = Sphere {centre : Vec3{x: -0.4, y: 0.3, z: -0.7}, radius : 0.25, mat : &Material::GLOSSY};
         let sphere3 = Sphere {centre : Vec3{x: 0.4, y: -0.3, z: -0.7}, radius : 0.25, mat : &Material::MIRROR};
-        let sphere4 = Sphere {centre : Vec3{x: 0.4, y: 0.3, z: -0.7}, radius : 0.25, mat : &Material::FRESNEL_GLASS};
+        let sphere4 = Sphere {centre : Vec3{x: 0.05, y: -0.05, z: -0.5}, radius : 0.15, mat : &Material::FRESNEL_GLASS};
         let sphere5 = Sphere {centre : Vec3{x: 0.0, y: -0.65, z: -0.7}, radius : 0.25, mat : &Material::TOMATO};
 
-
-        Scene{spheres : vec![sphere1, sphere2, sphere3, sphere4, sphere5], lights : vec![], planes: vec![left, right, ground, roof, far, near]}
+        Scene {
+            objects : vec![
+                Box::new(sphere1), Box::new(sphere2), Box::new(sphere3), Box::new(sphere4), Box::new(sphere5),
+                Box::new(left), Box::new(right), Box::new(ground), Box::new(roof), Box::new(far), Box::new(near)
+            ]
+        }
 
     }
 }
