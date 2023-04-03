@@ -8,9 +8,9 @@ Currently, it supports :
  * semi-specular surfaces
  * spheres and planes primitives
 
-Hopefully, more features can be added later. (seee roadmap.md)
+Hopefully, more features can be added later. (see roadmap.md)
 
-# Usage
+## Usage
 
 Simply run the main.rs file, with cargo run or by compiling it.
 It isn't documented yet, but one can change several options, and build scenes by looking at how it is done in the source code.
