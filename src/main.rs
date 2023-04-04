@@ -15,7 +15,18 @@ use render::{pixel_shader, Camera, Context};
 use scene::Scene;
 use vector::{Mat4, Vec3};
 
+fn tests() {
+    let normal = Vec3{x:0.0, y:0.0, z:-1.0}.normalized();
+    let rotated = Vec3 {x:0.0, y:0.0, z:1.0}.rotate_to_face(&normal);
+    let dot = Vec3 {x:0.0, y:0.0, z:1.0}.dot(&normal);
+    let acos = dot.acos();
+    println!("rotated : {}, dot: {}, acos: {}", rotated, dot, acos)
+}
+
 fn main() {
+    //tests();
+    //return;
+
     let (width, height): (u32, u32) = (1000, 1000);
 
     let ctx = Context {
@@ -23,34 +34,17 @@ fn main() {
         width,
         height,
         camera: Camera {
-            focal_length: 1.0,
-            pos: Vec3 {
-                x: 0.7,
-                y: 0.7,
-                z: -0.3,
-            },
+            focal_length: 0.7,
+            pos: Vec3{x : 0.4, y : -0.65, z : 0.9},
             rot: Mat4::look_at(
                 &Vec3 {
-                    x: -1.0,
+                    x: 0.8,
                     y: -0.7,
-                    z: 0.0,
-                }
-                .normalized(),
+                    z: -1.0,
+                }.normalized(),
             ),
         },
     };
-    println!("camera rot : {:?}", ctx.camera.rot.elems);
-    println!(
-        "(0,0,-1) sent to : {}",
-        ctx.camera
-            .rot
-            .apply_dir3(&Vec3 {
-                x: 0.0,
-                y: 0.0,
-                z: -1.0
-            })
-            .as_vec3()
-    );
 
     let img: image::RgbImage = ImageBuffer::new(width, height);
 
@@ -73,7 +67,7 @@ fn main() {
         let new_thread = thread::spawn(move || {
             for i in low..up {
                 for j in 0..height {
-                    let pixel = pixel_shader(&ctx_clone, i, j, 7, 50);
+                    let pixel = pixel_shader(&ctx_clone, i, j, 7, 1000);
                     img_clone.lock().unwrap().put_pixel(i, j, pixel);
                 }
                 let mut ref_ = counter_clone.lock().unwrap();

@@ -588,11 +588,11 @@ impl Scene {
         };
         let sphere4 = Sphere {
             centre: Vec3 {
-                x: 0.05,
-                y: -0.05,
-                z: -0.5,
+                x: 0.6,
+                y: -0.75,
+                z: 0.6,
             },
-            radius: 0.15,
+            radius: 0.25,
             mat: &Material::FRESNEL_GLASS,
         };
         let sphere5 = Sphere {
@@ -607,11 +607,11 @@ impl Scene {
 
         Scene {
             objects: vec![
-                Box::new(sphere1),
-                Box::new(sphere2),
-                Box::new(sphere3),
+                //Box::new(sphere1),
+                //Box::new(sphere2),
+                //Box::new(sphere3),
                 Box::new(sphere4),
-                Box::new(sphere5),
+                //Box::new(sphere5),
                 Box::new(left),
                 Box::new(right),
                 Box::new(ground),

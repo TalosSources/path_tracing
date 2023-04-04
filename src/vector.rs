@@ -1,3 +1,5 @@
+use std::f64::consts::PI;
+
 use rand::{thread_rng, Rng};
 
 pub struct Vec3 {
@@ -93,6 +95,56 @@ impl Vec3 {
 
         let vec = Self::random_unit_vector();
         vec.scale(normal.dot(&vec).signum())
+    }
+
+    pub fn random_vector_hemisphere_wrong(normal :&Self) -> Self {
+        let phi : f64 = 2.0 * PI * thread_rng().gen::<f64>();
+        let theta : f64 = 1.0 * PI * thread_rng().gen::<f64>();
+
+        let vec = Vec3 {x : phi.cos() * theta.sin(), y : phi.sin() * theta.sin(), z : theta.cos()};
+        vec.scale(normal.dot(&vec).signum())
+    }
+
+    pub fn cosine_weighted_hemisphere(normal : &Self) -> Self {
+        let phi : f64 = 2.0 * PI * thread_rng().gen::<f64>();
+        let theta : f64 = thread_rng().gen::<f64>().sqrt().acos();
+        let vec = Vec3 {x : phi.cos() * theta.sin(), y : phi.sin() * theta.sin(), z : theta.cos()};
+        vec.rotate_to_face(&normal)
+    }
+
+    pub fn rotate_to_face(&self, normal : &Vec3) -> Self {
+        /*Everything is symetrical around the z axis.
+            So as long as unit  z is aligned with normal, everything good */
+        let forward = Vec3 {x: 0.0, y: 0.0, z: 1.0};
+        //we align forward with normal
+        let angle = forward.dot(normal).acos();
+        if angle < 0.001 {
+            return self.clone();
+        } else if (angle - PI).abs() < 0.001 {
+            //println!("here, normal={}, return={}", normal, self.scale(-1.0));
+            return self.scale(-1.0)
+        }
+        let axis = forward.cross(normal).normalized();
+        self.rotate_around(&axis, angle)
+    }
+
+    pub fn rotate_around(&self, axis : &Vec3, angle : f64) -> Self {
+        let cos = angle.cos(); let sin = angle.sin();
+        let omc = 1.0 - cos;
+        Self {
+            x : 
+                (cos + axis.x.powf(2.0) * omc) * self.x +
+                (axis.x*axis.y * omc - axis.z * sin) * self.y +
+                (axis.x*axis.z * omc + axis.y * sin) * self.z,
+            y :
+                (axis.x*axis.y * omc + axis.z * sin) * self.x + 
+                (cos + axis.y.powf(2.0) * omc) * self.y + 
+                (axis.y*axis.z * omc - axis.x * sin) * self.z,
+            z :
+                (axis.x*axis.z*omc - axis.y*sin) * self.x + 
+                (axis.z*axis.y*omc + axis.x*sin) * self.y + 
+                (cos + axis.z.powf(2.0)*omc) * self.z,
+        }
     }
 
     pub fn affine(&self, x1: f64, x2: f64, y1: f64, y2: f64) -> Vec3 {

@@ -119,7 +119,8 @@ fn reflect(dir: &Vec3, normal: &Vec3, roughness: f64) -> Vec3 {
         .minus(&normal.scale(2.0 * normal.dot(&dir)))
         .normalized();
 
-    let random_dir = &Vec3::random_vector_in_hemisphere(normal);
+    //let random_dir = &Vec3::random_vector_in_hemisphere(normal);
+    let random_dir = &Vec3::cosine_weighted_hemisphere(normal);
 
     reflected_dir
         .scale(1.0 - roughness)
@@ -172,9 +173,6 @@ pub fn pixel_shader(ctx: &Context, i: u32, j: u32, bounces: u8, samples_per_pixe
         loop {
             let int = intersect(&ray, &ctx.scene);
             if int.hit {
-                //let intensity = int.normal.dot(&ctx.scene.light_dir);
-                //let col = (255.0 * intensity) as u8;
-                //let col = int.mat.albedo.scale(intensity);
 
                 let dotp = -int.normal.dot(&ray.dir);
                 let k_fresnel =
@@ -204,6 +202,7 @@ pub fn pixel_shader(ctx: &Context, i: u32, j: u32, bounces: u8, samples_per_pixe
                         ray.origin = int.pos.add(&int.normal.scale(-0.001));
                     } else {
                         ray.dir = reflect(&ray.dir, &int.normal, int.mat.roughness);
+                        //let cos_theta = ray.dir.dot(&int.normal);
                         ray.color = ray.color.mult(&int.mat.albedo);
                         ray.origin = int.pos.add(&int.normal.scale(0.001));
                     }
