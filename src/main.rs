@@ -11,9 +11,9 @@ use std::thread;
 use image::ImageBuffer;
 
 use material::Material;
-use render::{pixel_shader, Context};
+use render::{pixel_shader, Camera, Context};
 use scene::Scene;
-use vector::Vec3;
+use vector::{Mat4, Vec3};
 
 fn main() {
     let (width, height): (u32, u32) = (1000, 1000);
@@ -22,8 +22,36 @@ fn main() {
         scene: Scene::cornell_box(),
         width,
         height,
-        focal_length: 0.7,
+        camera: Camera {
+            focal_length: 1.0,
+            pos: Vec3 {
+                x: 0.7,
+                y: 0.7,
+                z: -0.3,
+            },
+            rot: Mat4::look_at(
+                &Vec3 {
+                    x: -1.0,
+                    y: -0.7,
+                    z: 0.0,
+                }
+                .normalized(),
+            ),
+        },
     };
+    println!("camera rot : {:?}", ctx.camera.rot.elems);
+    println!(
+        "(0,0,-1) sent to : {}",
+        ctx.camera
+            .rot
+            .apply_dir3(&Vec3 {
+                x: 0.0,
+                y: 0.0,
+                z: -1.0
+            })
+            .as_vec3()
+    );
+
     let img: image::RgbImage = ImageBuffer::new(width, height);
 
     let img_ref = Arc::new(Mutex::new(img));
@@ -45,7 +73,7 @@ fn main() {
         let new_thread = thread::spawn(move || {
             for i in low..up {
                 for j in 0..height {
-                    let pixel = pixel_shader(&ctx_clone, i, j, 7, 5000);
+                    let pixel = pixel_shader(&ctx_clone, i, j, 7, 50);
                     img_clone.lock().unwrap().put_pixel(i, j, pixel);
                 }
                 let mut ref_ = counter_clone.lock().unwrap();

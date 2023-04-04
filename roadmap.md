@@ -1,8 +1,9 @@
 clean-up code, modularize, in several files, use mods, classes, good stuff . DONE
 create an object trait, with intersection functions. : DONE
 look up how the rendering equation actually works. do it properly. (look up tomato, fresnel, lambert, and how they combine)
+add cool material and effects : Beer's law, diffuse refraction, cool stuff like that (look article about it on bookmarks)
 add all the features, texturing, bump mapping, triangle intersection, meshes
-make a matrix system, and the basic camera transformations
+make a matrix system, and the basic camera transformations DONE
 add the ability to make video or a graphical interface with accumulative render or both
 do lens effects : depth of field
 make a nice cornell box and have fun.

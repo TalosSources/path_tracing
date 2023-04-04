@@ -1,6 +1,6 @@
 use crate::scene::{Plane, Scene, Sphere};
+use crate::vector::{Mat4, Vec3};
 use crate::Material;
-use crate::Vec3;
 
 use image::Rgb;
 use rand::{thread_rng, Rng};
@@ -9,7 +9,13 @@ pub struct Context {
     pub scene: Scene,
     pub width: u32,
     pub height: u32,
+    pub camera: Camera,
+}
+
+pub struct Camera {
     pub focal_length: f64,
+    pub pos: Vec3,
+    pub rot: Mat4,
 }
 
 pub struct Ray {
@@ -40,7 +46,7 @@ impl<'a> Default for Intersection<'a> {
     }
 }
 
-pub trait Object {
+pub trait Primitive {
     fn intersect(&self, ray: &Ray) -> Intersection;
 }
 
@@ -63,7 +69,7 @@ fn intersect<'a>(ray: &Ray, scene: &'a Scene) -> Intersection<'a> {
     inter
 }
 
-impl Object for Sphere {
+impl Primitive for Sphere {
     fn intersect(&self, ray: &Ray) -> Intersection {
         let dp: Vec3 = ray.origin.minus(&self.centre);
         let dir_dot_dp = ray.dir.dot(&dp);
@@ -94,7 +100,7 @@ impl Object for Sphere {
     }
 }
 
-impl Object for Plane {
+impl Primitive for Plane {
     fn intersect(&self, ray: &Ray) -> Intersection {
         let mu = -ray.origin.minus(&self.pos).dot(&self.normal) / ray.dir.dot(&self.normal);
 
@@ -141,15 +147,22 @@ pub fn pixel_shader(ctx: &Context, i: u32, j: u32, bounces: u8, samples_per_pixe
     //let ray = Ray{origin : Vec3{x : x, y : y, z : 0.0}, dir : Vec3{x : 0.0, y : 0.0, z : -1.0}}; //ORTHOGRAPHIC PROJETION
 
     let mut acc_color = Vec3::ZERO;
-    for _ in 0..samples_per_pixel {
-        let mut ray = Ray {
-            origin: Vec3::ZERO,
-            dir: Vec3 {
+    let cam_dir = ctx
+        .camera
+        .rot
+        .apply_dir3(
+            &Vec3 {
                 x,
                 y,
-                z: -ctx.focal_length,
+                z: -ctx.camera.focal_length,
             }
             .normalized(),
+        )
+        .as_vec3();
+    for _ in 0..samples_per_pixel {
+        let mut ray = Ray {
+            origin: ctx.camera.pos.clone(),
+            dir: cam_dir.clone(),
             color: Vec3::ONE,
             emitted: Vec3::ZERO,
             n: Material::N_AIR,

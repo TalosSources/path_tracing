@@ -1,4 +1,4 @@
-use crate::render::Object;
+use crate::render::Primitive;
 use crate::Material;
 use crate::Vec3;
 
@@ -15,7 +15,7 @@ pub struct Plane {
 }
 
 pub struct Scene {
-    pub objects: Vec<Box<dyn Object + Send + Sync>>,
+    pub objects: Vec<Box<dyn Primitive + Send + Sync>>,
 }
 
 impl Scene {
@@ -213,7 +213,7 @@ impl Scene {
             },
         ];
 
-        let mut objects: Vec<Box<dyn Object + Send + Sync>> = vec![];
+        let mut objects: Vec<Box<dyn Primitive + Send + Sync>> = vec![];
         for p in planes {
             objects.push(Box::new(p));
         }
