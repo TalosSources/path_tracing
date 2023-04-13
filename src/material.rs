@@ -1,5 +1,6 @@
 use crate::Vec3;
 
+#[derive(Debug)]
 pub struct Material {
     pub albedo: Vec3,
     pub specular: Vec3,

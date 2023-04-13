@@ -1,7 +1,11 @@
-use std::f64::consts::PI;
+use std::{
+    f64::consts::PI,
+    ops::{Add, Mul},
+};
 
 use rand::{thread_rng, Rng};
 
+#[derive(Debug)]
 pub struct Vec3 {
     pub x: f64,
     pub y: f64,
@@ -20,7 +24,7 @@ impl Vec3 {
         z: 1.0,
     };
 
-    pub fn add(&self, other: &Vec3) -> Vec3 {
+    fn add(&self, other: &Vec3) -> Vec3 {
         Vec3 {
             x: self.x + other.x,
             y: self.y + other.y,
@@ -97,53 +101,63 @@ impl Vec3 {
         vec.scale(normal.dot(&vec).signum())
     }
 
-    pub fn random_vector_hemisphere_wrong(normal :&Self) -> Self {
-        let phi : f64 = 2.0 * PI * thread_rng().gen::<f64>();
-        let theta : f64 = 1.0 * PI * thread_rng().gen::<f64>();
+    pub fn random_vector_hemisphere_wrong(normal: &Self) -> Self {
+        let phi: f64 = 2.0 * PI * thread_rng().gen::<f64>();
+        let theta: f64 = 1.0 * PI * thread_rng().gen::<f64>();
 
-        let vec = Vec3 {x : phi.cos() * theta.sin(), y : phi.sin() * theta.sin(), z : theta.cos()};
+        let vec = Vec3 {
+            x: phi.cos() * theta.sin(),
+            y: phi.sin() * theta.sin(),
+            z: theta.cos(),
+        };
         vec.scale(normal.dot(&vec).signum())
     }
 
-    pub fn cosine_weighted_hemisphere(normal : &Self) -> Self {
-        let phi : f64 = 2.0 * PI * thread_rng().gen::<f64>();
-        let theta : f64 = thread_rng().gen::<f64>().sqrt().acos();
-        let vec = Vec3 {x : phi.cos() * theta.sin(), y : phi.sin() * theta.sin(), z : theta.cos()};
+    pub fn cosine_weighted_hemisphere(normal: &Self) -> Self {
+        let phi: f64 = 2.0 * PI * thread_rng().gen::<f64>();
+        let theta: f64 = thread_rng().gen::<f64>().sqrt().acos();
+        let vec = Vec3 {
+            x: phi.cos() * theta.sin(),
+            y: phi.sin() * theta.sin(),
+            z: theta.cos(),
+        };
         vec.rotate_to_face(&normal)
     }
 
-    pub fn rotate_to_face(&self, normal : &Vec3) -> Self {
+    pub fn rotate_to_face(&self, normal: &Vec3) -> Self {
         /*Everything is symetrical around the z axis.
-            So as long as unit  z is aligned with normal, everything good */
-        let forward = Vec3 {x: 0.0, y: 0.0, z: 1.0};
+        So as long as unit  z is aligned with normal, everything good */
+        let forward = Vec3 {
+            x: 0.0,
+            y: 0.0,
+            z: 1.0,
+        };
         //we align forward with normal
         let angle = forward.dot(normal).acos();
         if angle < 0.001 {
             return self.clone();
         } else if (angle - PI).abs() < 0.001 {
             //println!("here, normal={}, return={}", normal, self.scale(-1.0));
-            return self.scale(-1.0)
+            return self.scale(-1.0);
         }
         let axis = forward.cross(normal).normalized();
         self.rotate_around(&axis, angle)
     }
 
-    pub fn rotate_around(&self, axis : &Vec3, angle : f64) -> Self {
-        let cos = angle.cos(); let sin = angle.sin();
+    pub fn rotate_around(&self, axis: &Vec3, angle: f64) -> Self {
+        let cos = angle.cos();
+        let sin = angle.sin();
         let omc = 1.0 - cos;
         Self {
-            x : 
-                (cos + axis.x.powf(2.0) * omc) * self.x +
-                (axis.x*axis.y * omc - axis.z * sin) * self.y +
-                (axis.x*axis.z * omc + axis.y * sin) * self.z,
-            y :
-                (axis.x*axis.y * omc + axis.z * sin) * self.x + 
-                (cos + axis.y.powf(2.0) * omc) * self.y + 
-                (axis.y*axis.z * omc - axis.x * sin) * self.z,
-            z :
-                (axis.x*axis.z*omc - axis.y*sin) * self.x + 
-                (axis.z*axis.y*omc + axis.x*sin) * self.y + 
-                (cos + axis.z.powf(2.0)*omc) * self.z,
+            x: (cos + axis.x.powf(2.0) * omc) * self.x
+                + (axis.x * axis.y * omc - axis.z * sin) * self.y
+                + (axis.x * axis.z * omc + axis.y * sin) * self.z,
+            y: (axis.x * axis.y * omc + axis.z * sin) * self.x
+                + (cos + axis.y.powf(2.0) * omc) * self.y
+                + (axis.y * axis.z * omc - axis.x * sin) * self.z,
+            z: (axis.x * axis.z * omc - axis.y * sin) * self.x
+                + (axis.z * axis.y * omc + axis.x * sin) * self.y
+                + (cos + axis.z.powf(2.0) * omc) * self.z,
         }
     }
 
@@ -159,6 +173,39 @@ impl Vec3 {
             x: closure(self.x),
             y: closure(self.y),
             z: closure(self.z),
+        }
+    }
+}
+
+impl Add for &Vec3 {
+    type Output = Vec3;
+    fn add(self, other: Self) -> Vec3 {
+        Vec3 {
+            x: self.x + other.x,
+            y: self.y + other.y,
+            z: self.z + other.z,
+        }
+    }
+}
+
+impl Mul for &Vec3 {
+    type Output = Vec3;
+    fn mul(self, other: Self) -> Vec3 {
+        Vec3 {
+            x: self.x * other.x,
+            y: self.y * other.y,
+            z: self.z * other.z,
+        }
+    }
+}
+
+impl Mul<f64> for &Vec3 {
+    type Output = Vec3;
+    fn mul(self, other: f64) -> Vec3 {
+        Vec3 {
+            x: self.x * other,
+            y: self.y * other,
+            z: self.z * other,
         }
     }
 }
@@ -265,7 +312,11 @@ impl Mat4 {
         Mat4 { elems }
     }
 
-    pub fn look_at(dir: &Vec3) -> Mat4 {
+    pub fn look_at(v1: &Vec3, v2: &Vec3) -> Mat4 {
+        Self::look_in_dir(&v2.minus(v1).normalized())
+    }
+
+    pub fn look_in_dir(dir: &Vec3) -> Mat4 {
         //(0,0,1) -> -dir
         //(1,0,0) needs to be on ground plane -> dir cross up
         //(0,1,0) will be cross of other two

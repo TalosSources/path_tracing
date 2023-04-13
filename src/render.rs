@@ -19,19 +19,20 @@ pub struct Camera {
 }
 
 pub struct Ray {
-    origin: Vec3,
-    dir: Vec3,
-    color: Vec3,
-    emitted: Vec3,
-    n: f64,
+    pub origin: Vec3,
+    pub dir: Vec3,
+    pub color: Vec3,
+    pub emitted: Vec3,
+    pub n: f64,
 }
 
+#[derive(Debug)]
 pub struct Intersection<'a> {
-    hit: bool,
-    dist: f64,
-    pos: Vec3,
-    normal: Vec3,
-    mat: &'a Material,
+    pub hit: bool,
+    pub dist: f64,
+    pub pos: Vec3,
+    pub normal: Vec3,
+    pub mat: &'a Material,
 }
 
 impl<'a> Default for Intersection<'a> {
@@ -84,7 +85,8 @@ impl Primitive for Sphere {
             }
             let hit = dist > 0.0;
             if hit {
-                let pos = ray.origin.add(&ray.dir.scale(dist));
+                //let pos = ray.origin.add(&ray.dir.scale(dist));
+                let pos = &ray.origin + &(&ray.dir * dist);
                 let normal = pos.minus(&self.centre).normalized();
                 return Intersection {
                     hit,
@@ -107,7 +109,7 @@ impl Primitive for Plane {
         Intersection {
             hit: mu > 0.0,
             dist: mu,
-            pos: ray.origin.add(&ray.dir.scale(mu)),
+            pos: &ray.origin + &ray.dir.scale(mu),
             normal: self.normal.clone(),
             mat: self.mat,
         }
@@ -122,10 +124,7 @@ fn reflect(dir: &Vec3, normal: &Vec3, roughness: f64) -> Vec3 {
     //let random_dir = &Vec3::random_vector_in_hemisphere(normal);
     let random_dir = &Vec3::cosine_weighted_hemisphere(normal);
 
-    reflected_dir
-        .scale(1.0 - roughness)
-        .add(&random_dir.scale(roughness))
-        .normalized()
+    (&(&reflected_dir * (1.0 - roughness)) + &random_dir.scale(roughness)).normalized()
 }
 
 fn refract(dir: &Vec3, normal: &Vec3, n1: f64, n2: f64) -> Vec3 {
@@ -133,11 +132,7 @@ fn refract(dir: &Vec3, normal: &Vec3, n1: f64, n2: f64) -> Vec3 {
     let nd = normal.dot(&dir);
     let sqr_root = (nd.powf(2.0) + (n2 / n1).powf(2.0) - 1.0).sqrt();
 
-    normal
-        .scale(sqr_root - nd)
-        .add(dir)
-        .scale(n1 / n2)
-        .normalized()
+    (&(&(&normal * (sqr_root - nd)) + dir) * (n1 / n2)).normalized()
 }
 
 pub fn pixel_shader(ctx: &Context, i: u32, j: u32, bounces: u8, samples_per_pixel: u32) -> Rgb<u8> {
@@ -173,12 +168,11 @@ pub fn pixel_shader(ctx: &Context, i: u32, j: u32, bounces: u8, samples_per_pixe
         loop {
             let int = intersect(&ray, &ctx.scene);
             if int.hit {
-
                 let dotp = -int.normal.dot(&ray.dir);
                 let k_fresnel =
                     int.mat.fresnel_0 + (1.0 - int.mat.fresnel_0) * (1.0 - dotp).powf(5.0);
 
-                ray.emitted = ray.emitted.add(&int.mat.emissive.mult(&ray.color));
+                ray.emitted = &ray.emitted + &(&int.mat.emissive.mult(&ray.color));
 
                 //dir stuff TODO refactor this mess
                 let is_specular_bounce = thread_rng().gen::<f64>() < int.mat.specularity;
@@ -199,12 +193,12 @@ pub fn pixel_shader(ctx: &Context, i: u32, j: u32, bounces: u8, samples_per_pixe
                         let scaler = int.mat.transparency;
                         let new_color = ray.color.mult(&int.mat.albedo).scale(scaler);
                         ray.color = new_color;
-                        ray.origin = int.pos.add(&int.normal.scale(-0.001));
+                        ray.origin = &int.pos + &int.normal.scale(-0.001);
                     } else {
                         ray.dir = reflect(&ray.dir, &int.normal, int.mat.roughness);
                         //let cos_theta = ray.dir.dot(&int.normal);
                         ray.color = ray.color.mult(&int.mat.albedo);
-                        ray.origin = int.pos.add(&int.normal.scale(0.001));
+                        ray.origin = &int.pos + &int.normal.scale(0.001);
                     }
                 }
             } else {
@@ -217,7 +211,7 @@ pub fn pixel_shader(ctx: &Context, i: u32, j: u32, bounces: u8, samples_per_pixe
             }
         }
 
-        acc_color = acc_color.add(&ray.emitted);
+        acc_color = &acc_color + &ray.emitted;
     }
 
     acc_color = acc_color.scale(1.0 / (samples_per_pixel as f64));
