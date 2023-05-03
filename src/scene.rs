@@ -36,11 +36,12 @@ impl Primitive for Parallelogram {
             0.0 <= proj_1 && proj_1 <= self.l1 && 0.0 <= proj_2 && proj_2 <= self.l2 && mu > 0.0;
 
         if hit {
+            let inside = self.normal.dot(&ray.dir) > 0.0;
             let inter = Intersection {
                 hit,
                 dist: mu,
                 pos,
-                normal: self.normal.clone(), //the normal must be opposing incoming ray
+                normal: self.normal.scale(if inside { -1.0 } else { 1.0 }), //the normal must be opposing incoming ray
                 mat: self.mat,
             };
             //println!("inter at plgm : {:?}", inter);
@@ -617,7 +618,7 @@ impl Scene {
                 y: 1.0,
                 z: 0.0,
             },
-            mat: &Material::WHITE_LIGHT,
+            mat: &Material::DIFFUSE,
         }; // TODO : use a smaller light instead
         let far = Plane {
             normal: Vec3 {
@@ -645,6 +646,23 @@ impl Scene {
             },
             mat: &Material::DIFFUSE,
         };
+
+        let light_area = Parallelogram::new(
+            Vec3 {
+                x: -0.5,
+                y: 0.99,
+                z: -0.5,
+            },
+            Vec3 {
+                x: 1.0,
+                ..Vec3::ZERO
+            },
+            Vec3 {
+                z: 1.0,
+                ..Vec3::ZERO
+            },
+            &Material::WHITE_LIGHT,
+        );
 
         let sphere1 = Sphere {
             centre: Vec3 {
@@ -675,11 +693,11 @@ impl Scene {
         };
         let sphere4 = Sphere {
             centre: Vec3 {
-                x: 0.6,
-                y: -0.75,
-                z: 0.6,
+                x: 0.0,
+                y: -0.6,
+                z: -0.3,
             },
-            radius: 0.25,
+            radius: 0.3,
             mat: &Material::FRESNEL_GLASS,
         };
         let sphere5 = Sphere {
@@ -694,12 +712,12 @@ impl Scene {
 
         let cube1 = cube(
             Vec3 {
-                x: -0.3,
-                y: -0.3,
-                z: -0.26,
+                x: 0.0,
+                y: -0.9,
+                z: 0.3,
             },
-            0.6,
-            &Material::GLASS,
+            0.5,
+            &Material::FRESNEL_GLASS,
         );
 
         let square1 = Parallelogram::new(
@@ -718,17 +736,18 @@ impl Scene {
         );
 
         let mut objects: Vec<Box<dyn Primitive + Send + Sync>> = vec![
-            Box::new(sphere1),
-            Box::new(sphere2),
-            Box::new(sphere3),
+            //Box::new(sphere1),
+            //Box::new(sphere2),
+            //Box::new(sphere3),
             Box::new(sphere4),
-            Box::new(sphere5),
+            //Box::new(sphere5),
             Box::new(left),
             Box::new(right),
             Box::new(ground),
             Box::new(roof),
             Box::new(far),
             Box::new(near),
+            Box::new(light_area),
         ];
 
         for p in cube1 {

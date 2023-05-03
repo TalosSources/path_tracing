@@ -18,6 +18,16 @@ pub struct Camera {
     pub rot: Mat4,
 }
 
+impl Camera {
+    pub fn new(pos: Vec3, target: Vec3, focal_length: f64) -> Camera {
+        Camera {
+            focal_length,
+            rot: Mat4::look_at(&pos, &target),
+            pos,
+        }
+    }
+}
+
 pub struct Ray {
     pub origin: Vec3,
     pub dir: Vec3,

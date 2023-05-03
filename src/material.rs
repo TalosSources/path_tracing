@@ -74,9 +74,9 @@ impl Material {
         specular: Vec3::ZERO,
         specularity: 0.0,
         emissive: Vec3 {
-            x: 1.5,
-            y: 1.5,
-            z: 1.5,
+            x: 6.0,
+            y: 6.0,
+            z: 6.0,
         },
         roughness: 0.0,
         fresnel_0: 0.0,
