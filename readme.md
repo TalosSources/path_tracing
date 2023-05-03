@@ -6,7 +6,7 @@ Currently, it supports :
  * specular refractions 
  * the combining of the two via fresnel equations
  * semi-specular surfaces
- * spheres and planes primitives
+ * spheres, planes and rectangle primitives
 
 Hopefully, more features can be added later. (see roadmap.md)
 
